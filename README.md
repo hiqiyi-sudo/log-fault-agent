@@ -204,41 +204,4 @@ log-fault-agent/
     └── diagnose_history.db # SQLite 工单库（不入库）
 ```
 
-## GitHub 提交与推送
 
-完整操作步骤见项目根目录 `init_git.bat` 与本文档下方「GitHub 操作说明」章节。
-
-### 首次提交（本地）
-
-```bash
-cd E:\pythonProject1\log-fault-agent
-git init
-git add .
-git commit -m "feat: 日志故障诊断 Agent（FastAPI + LangGraph + RAG + Chroma + 智谱GLM）"
-```
-
-### 推送至 GitHub
-
-```bash
-# 1. GitHub 新建空仓库（不要勾选 README/.gitignore，避免冲突）
-# 2. 关联远程仓库（将 <user>/<repo> 替换为你的仓库）
-git remote add origin https://github.com/<user>/<repo>.git
-
-# 3. 推送
-git push -u origin main
-# （若默认分支为 master，则 git push -u origin master）
-```
-
-### 后续更新提交
-
-```bash
-git add .
-git commit -m "feat: 更新 xxx"
-git push
-```
-
-### 安全与体积说明
-
-- `.env`（智谱 API Key）已被 `.gitignore` 排除，**不会**上传
-- `HDFS.log`（1.5GB）、`anomaly_label.csv`、`rag/data/chroma/` 向量库已被 `.gitignore` 排除，**不会**上传
-- 仓库中仅包含代码与轻量配置，克隆后按「环境准备 / 项目启动步骤」即可本地复现
