@@ -4,6 +4,8 @@
     GET  /api/history        查询历史诊断记录
     POST /api/diagnose       提交日志/故障, Agent 完成 意图识别 -> RAG检索 -> GLM诊断 -> SQLite归档
 """
+
+# ============================================
 import os
 from contextlib import asynccontextmanager
 from typing import List, Optional
