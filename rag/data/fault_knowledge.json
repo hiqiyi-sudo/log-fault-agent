@@ -1,0 +1,205 @@
+[
+  {
+    "id": "kb_001",
+    "fault_type": "CPU 使用率过高",
+    "symptom_keywords": [
+      "cpu",
+      "load",
+      "高负载",
+      "使用率",
+      "top",
+      "进程",
+      "死循环"
+    ],
+    "diagnosis": "CPU 使用率持续飙高通常由死循环、高并发请求、GC 频繁、异常重试或挖矿/恶意进程导致。先用 top 定位占用最高的进程, 再结合线程栈或火焰图定位热点代码。",
+    "solution": "1. top 按 CPU 排序定位进程; 2. Java 应用执行 jstack 抓线程栈、Python 应用用 py-spy dump; 3. 检查是否高并发流量或定时任务叠加; 4. 优化热点代码、增加限流或扩容。",
+    "suggested_commands": [
+      "top -c",
+      "vmstat 1 5",
+      "ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head",
+      "jstack <pid> | grep -A 30 'java.lang.Thread.State'",
+      "py-spy dump --pid <pid>"
+    ]
+  },
+  {
+    "id": "kb_002",
+    "fault_type": "内存溢出 OOM",
+    "symptom_keywords": [
+      "oom",
+      "outofmemory",
+      "内存溢出",
+      "内存不足",
+      "java heap",
+      "memoryerror",
+      "heap space"
+    ],
+    "diagnosis": "OOM 常见于堆内存不足、大对象/集合无释放、连接/缓存未回收、元空间或线程栈溢出。Java 进程 OOM 后常伴随频繁 GC、进程重启或 core dump。",
+    "solution": "1. 增加 JVM 堆内存并开启 -XX:+HeapDumpOnOutOfMemoryError 导出 dump; 2. 用 MAT/VisualVM 分析堆快照定位大对象; 3. 排查未关闭的连接、流、全局缓存; 4. 设置合理的队列与线程数, 防止积压。",
+    "suggested_commands": [
+      "jmap -heap <pid>",
+      "jmap -dump:format=b,file=heap.hprof <pid>",
+      "jstat -gcutil <pid> 1000",
+      "free -h",
+      "ps -eo pid,rss,cmd --sort=-rss | head"
+    ]
+  },
+  {
+    "id": "kb_003",
+    "fault_type": "磁盘空间不足",
+    "symptom_keywords": [
+      "磁盘",
+      "空间不足",
+      "no space left",
+      "disk full",
+      "inode",
+      "日志增长"
+    ],
+    "diagnosis": "磁盘写满通常由日志/临时文件无限增长、数据库 WAL 膨胀、Docker 镜像残留或大文件上传导致。写满后服务会出现 No space left on device 类报错并中断。",
+    "solution": "1. df -h 与 df -i 定位挂载点; 2. du 逐层找出大目录并清理过期日志/临时文件; 3. 对日志配置滚动策略(如 logrotate、按大小切分); 4. 为 /var/log 等目录设置容量告警。",
+    "suggested_commands": [
+      "df -h",
+      "df -i",
+      "du -sh /* 2>/dev/null | sort -rh | head",
+      "find /var/log -type f -size +100M -exec ls -lh {} \\;",
+      "lsof -n | grep deleted"
+    ]
+  },
+  {
+    "id": "kb_004",
+    "fault_type": "数据库连接池耗尽",
+    "symptom_keywords": [
+      "连接池",
+      "connection pool",
+      "too many connections",
+      "连接数",
+      "wait timeout",
+      "无法获取连接"
+    ],
+    "diagnosis": "连接池耗尽通常由慢 SQL 长时间占用连接、连接泄漏(未归还)、并发突增超过池上限或数据库 max_connections 配置过小导致。表现为接口批量超时与 Connection is not available 报错。",
+    "solution": "1. 查看数据库当前连接数与来源: SHOW PROCESSLIST; 2. 排查慢 SQL 并加索引/改写; 3. 检查应用连接池配置(最大连接数、空闲回收)与事务内 try-finally 归还; 4. 适当扩大连接池并压测验证。",
+    "suggested_commands": [
+      "SHOW PROCESSLIST;",
+      "SHOW VARIABLES LIKE 'max_connections';",
+      "SELECT COUNT(*) FROM information_schema.processlist WHERE user='app';",
+      "EXPLAIN <慢SQL>;"
+    ]
+  },
+  {
+    "id": "kb_005",
+    "fault_type": "数据库死锁 / 锁等待超时",
+    "symptom_keywords": [
+      "死锁",
+      "deadlock",
+      "lock wait",
+      "锁等待",
+      "lock timeout",
+      "事务冲突"
+    ],
+    "diagnosis": "死锁由多个事务以不同顺序持有并申请相同资源造成; 锁等待超时通常由长事务、大范围更新或未加索引导致行锁放大。数据库会回滚牺牲者事务并记录 Deadlock found 日志。",
+    "solution": "1. 从错误日志提取死锁涉及的表与 SQL; 2. 统一事务内多表操作顺序; 3. 缩小事务范围、避免长事务与全表更新; 4. 对高频更新字段加索引减少锁冲突, 必要时调整 innodb_lock_wait_timeout。",
+    "suggested_commands": [
+      "SHOW ENGINE INNODB STATUS\\G",
+      "SELECT * FROM information_schema.innodb_trx;",
+      "SELECT * FROM information_schema.innodb_lock_waits;",
+      "EXPLAIN <问题SQL>;"
+    ]
+  },
+  {
+    "id": "kb_006",
+    "fault_type": "端口被占用 / 服务启动失败",
+    "symptom_keywords": [
+      "端口",
+      "port",
+      "address already in use",
+      "启动失败",
+      "bind",
+      "无法启动"
+    ],
+    "diagnosis": "服务启动失败最常见原因是端口被其他进程占用、配置文件错误或依赖服务未就绪。Address already in use 表明旧实例未退出或端口被其他程序抢占。",
+    "solution": "1. 查看端口占用进程并确认是否为旧实例; 2. 确认服务配置的端口/依赖地址; 3. 重启前先优雅停止旧进程再启动; 4. 检查启动日志中的配置解析与依赖连接错误。",
+    "suggested_commands": [
+      "netstat -ano | findstr :8000",
+      "tasklist | findstr <pid>",
+      "ss -lntp | grep 8000",
+      "lsof -i :8000"
+    ]
+  },
+  {
+    "id": "kb_007",
+    "fault_type": "网络连接拒绝 / 超时",
+    "symptom_keywords": [
+      "connection refused",
+      "连接拒绝",
+      "网络超时",
+      "timeout",
+      "unreachable",
+      "connect timed out"
+    ],
+    "diagnosis": "Connection refused 说明目标端口未监听(服务未启动或监听地址不符); 超时说明目标可达但响应慢或被防火墙/安全组拦截。常见于服务迁移、负载均衡后端失联与跨网段访问。",
+    "solution": "1. 确认目标服务进程与监听地址(是否只监听 127.0.0.1); 2. 用 telnet/curl 从发起方验证连通性; 3. 检查防火墙、安全组与网络路由; 4. 排查 DNS 解析与超时参数(connect/read timeout)。",
+    "suggested_commands": [
+      "curl -v telnet://<host>:<port>",
+      "telnet <host> <port>",
+      "ping -n 4 <host>",
+      "tracert <host>",
+      "netstat -ano | findstr LISTENING"
+    ]
+  },
+  {
+    "id": "kb_008",
+    "fault_type": "Nginx 502 / 504",
+    "symptom_keywords": [
+      "502",
+      "504",
+      "bad gateway",
+      "gateway timeout",
+      "upstream",
+      "nginx"
+    ],
+    "diagnosis": "502 Bad Gateway 通常由后端服务崩溃/未启动或端口不通导致; 504 Gateway Timeout 由后端处理超时或上游连接队列积压导致。常见于后端重启、内存溢出 OOM、慢接口拖垮 upstream。",
+    "solution": "1. 检查后端服务进程与健康检查接口; 2. 查看后端应用日志定位崩溃原因; 3. 检查 Nginx error.log 中 upstream 相关报错; 4. 调整 proxy_read_timeout、增加 upstream 实例或做超时降级。",
+    "suggested_commands": [
+      "tail -f /var/log/nginx/error.log",
+      "curl -I http://127.0.0.1:<backend_port>/health",
+      "systemctl status <backend-service>",
+      "nginx -t"
+    ]
+  },
+  {
+    "id": "kb_009",
+    "fault_type": "线程池任务拒绝",
+    "symptom_keywords": [
+      "rejectedexecution",
+      "线程池",
+      "任务拒绝",
+      "队列",
+      "饱和",
+      "executor"
+    ],
+    "diagnosis": "线程池拒绝任务说明核心线程与队列均已饱和: 常见于突发流量、任务执行耗时过长或线程池参数(核心数/队列长度/拒绝策略)配置不合理。拒绝策略默认抛 RejectedExecutionException。",
+    "solution": "1. 确认线程池参数与当前任务积压量; 2. 定位任务耗时: 是否依赖外部服务/数据库慢查询; 3. 根据流量特性调大核心线程数或队列容量; 4. 设置合理的拒绝策略(如 CallerRunsPolicy)与告警监控。",
+    "suggested_commands": [
+      "jstack <pid> | grep -A 20 'RejectedExecutionException'",
+      "jstat -gcutil <pid> 1000",
+      "thread dump 分析线程池状态"
+    ]
+  },
+  {
+    "id": "kb_010",
+    "fault_type": "空指针异常 NPE",
+    "symptom_keywords": [
+      "nullpointer",
+      "npe",
+      "空指针",
+      "null",
+      "空对象"
+    ],
+    "diagnosis": "NPE 由代码对 null 对象调用方法/访问字段引发: 常见于外部接口返回 null、数据库查询无结果、缓存未命中后未判空、Map 取值无默认值等场景。日志会给出具体类名与行号。",
+    "solution": "1. 依据堆栈中的类名与行号定位代码; 2. 检查数据来源: 外部接口/DB 查询/缓存是否可能返回 null; 3. 使用 Optional、判空或默认值兜底; 4. 对关键路径补充参数校验与降级策略。",
+    "suggested_commands": [
+      "grep -n 'NullPointerException' app.log",
+      "jstack <pid> | head -100",
+      "结合日志时间点回查上游接口返回值"
+    ]
+  }
+]

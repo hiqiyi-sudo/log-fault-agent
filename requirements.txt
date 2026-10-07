@@ -1,0 +1,23 @@
+# ============ Web 服务 ============
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29,<1.0
+python-dotenv>=1.0
+
+# ============ Agent 编排 ============
+langgraph>=0.2.0,<0.5.0
+
+# ============ LLM / RAG 生态 ============
+langchain>=0.3.0,<0.4.0
+langchain-core>=0.3.0,<0.4.0
+
+# ============ 向量数据库 ============
+# 说明: chromadb 0.5/0.6/1.0 均依赖 chroma-hnswlib==0.7.6, 其 Windows 预编译 wheel 仅支持到
+#       Python 3.9(本机无 3.9, 且无 C++ 编译器无法源码构建); chromadb 1.5.x 已移除该 C++ 扩展,
+#       纯 wheel 安装。本项目使用 chromadb 原生 SDK(PersistentClient) 构建向量库。
+chromadb>=1.5.0,<2.0.0
+
+# ============ 智谱 GLM ============
+zhipuai>=2.1.0
+
+# ============ 数据模型 ============
+pydantic>=2.6

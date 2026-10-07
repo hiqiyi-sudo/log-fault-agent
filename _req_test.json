@@ -1,0 +1,1 @@
+{"log_text": "081109 203518 143 INFO dfs.DataNode: Receiving block blk_-1608999687919862906 src: /10.250.19.102:54106 dest: /10.250.19.102:50010 但随后出现 java.io.IOException 读取失败 网络连接超时 DataNode 心跳丢失"}

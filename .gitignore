@@ -1,0 +1,49 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------- 虚拟环境 ----------
+.venv/
+venv/
+env/
+ENV/
+
+# ---------- 密钥与环境变量（防止上传 GitHub） ----------
+.env
+.env.*
+!.env.example
+
+# ---------- Kaggle 大数据集（不入版本库） ----------
+rag/data/HDFS.log
+rag/data/anomaly_label.csv
+rag/data/chroma/
+
+# ---------- 日志缓存 / 运行产物 ----------
+*.log
+build_log.txt
+uvicorn_log.txt
+
+# ---------- SQLite 工单库（运行时数据） ----------
+db/*.db
+db/*.sqlite
+db/*.sqlite3
+db/*.sqlite-journal
+
+# ---------- IDE / 编辑器 ----------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
